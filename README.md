@@ -49,6 +49,10 @@ Our drivers enable seamless integration and full control of your telescope acces
 * [INDI Library](https://indilib.org/) (`libindi-dev`)
 * CMake ≥ 3.13
 
+```bash
+sudo apt install cmake libindi-dev libxisf-dev
+```
+
 ### Build & Install
 
 ```bash
