@@ -22,8 +22,15 @@ target_link_libraries(indi_amsky01
     pthread
 )
 
+# Generate XML file from template
+configure_file(
+    ${CMAKE_CURRENT_SOURCE_DIR}/indi_amsky01.xml.cmake
+    ${CMAKE_CURRENT_BINARY_DIR}/indi_amsky01.xml
+    @ONLY
+)
+
 # Install
 install(TARGETS indi_amsky01 RUNTIME DESTINATION /usr/bin)
 
 # Install XML file
-install(FILES indi_amsky01.xml DESTINATION /usr/share/indi)
+install(FILES ${CMAKE_CURRENT_BINARY_DIR}/indi_amsky01.xml DESTINATION /usr/share/indi)
