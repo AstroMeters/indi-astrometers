@@ -50,17 +50,22 @@ bool AMSKY01::initProperties()
     addParameter("WEATHER_LIGHT_LUX", "Light (lux)", 0, 100000, 15);
     addParameter("WEATHER_SKY_BRIGHTNESS", "Sky Brightness (mag/arcsec²)", 10, 25, 15);
     addParameter("WEATHER_CLOUD_COVER", "Cloud Cover (%)", 0, 100, 15);
-    addParameter("WEATHER_SKY_TEMPERATURE", "Sky Temperature Avg (°C)", -80, 50, 15);
+    addParameter("WEATHER_SKY_TEMPERATURE", "Sky Temperature Avg (ADU)", 60000, 70000, 15);
     
     // Individuální teploty ze sky senzoru (5 thermopile segmentů)
-    addParameter("WEATHER_SKY_TEMP_1", "Sky Temp 1 (°C)", -80, 50, 15);
-    addParameter("WEATHER_SKY_TEMP_2", "Sky Temp 2 (°C)", -80, 50, 15);
-    addParameter("WEATHER_SKY_TEMP_3", "Sky Temp 3 (°C)", -80, 50, 15);
-    addParameter("WEATHER_SKY_TEMP_4", "Sky Temp 4 (°C)", -80, 50, 15);
-    addParameter("WEATHER_SKY_TEMP_5", "Sky Temp 5 - Zenith (°C)", -80, 50, 15);
+    addParameter("WEATHER_SKY_TEMP_1", "Sky Temp 1 (ADU)", 60000, 70000, 15);
+    addParameter("WEATHER_SKY_TEMP_2", "Sky Temp 2 (ADU)", 60000, 70000, 15);
+    addParameter("WEATHER_SKY_TEMP_3", "Sky Temp 3 (ADU)", 60000, 70000, 15);
+    addParameter("WEATHER_SKY_TEMP_4", "Sky Temp 4 (ADU)", 60000, 70000, 15);
+    addParameter("WEATHER_SKY_TEMP_5", "Sky Temp 5 - Zenith (ADU)", 60000, 70000, 15);
     
     setCriticalParameter("WEATHER_TEMPERATURE");
     setCriticalParameter("WEATHER_HUMIDITY");
+    setCriticalParameter("WEATHER_DEW_POINT");
+    setCriticalParameter("WEATHER_LIGHT_LUX");
+    setCriticalParameter("WEATHER_SKY_BRIGHTNESS");
+    setCriticalParameter("WEATHER_CLOUD_COVER");
+    setCriticalParameter("WEATHER_SKY_TEMPERATURE");
 
     // Device info
     addDebugControl();
@@ -115,16 +120,12 @@ bool AMSKY01::Handshake()
     if (isSimulation())
     {
         LOGF_INFO("Connected successfully to simulated %s.", getDeviceName());
-        printf("[AMSKY01] Connected to simulated device\n");
-        std::cout.flush();
         return true;
     }
 
     // Weather base class handles connection management
     // Just confirm connection is ready
     LOGF_INFO("Connected successfully to %s.", getDeviceName());
-    printf("[AMSKY01] Connected to serial device\n");
-    std::cout.flush();
     
     return true;
 }
@@ -143,8 +144,6 @@ bool AMSKY01::sendCommand(const char *cmd)
             char errorMessage[MAXRBUF];
             tty_error_msg(tty_rc, errorMessage, MAXRBUF);
             LOGF_ERROR("Serial write error: %s", errorMessage);
-            printf("[AMSKY01] Serial write error: %s\n", errorMessage);
-            std::cout.flush();
             return false;
         }
     }
@@ -267,18 +266,6 @@ void AMSKY01::processData(const std::string& data)
     if (data[0] != '$')
         return;
         
-    // Print to console with timestamp
-    time_t rawtime;
-    struct tm * timeinfo;
-    char timestamp[80];
-    
-    time(&rawtime);
-    timeinfo = localtime(&rawtime);
-    strftime(timestamp, sizeof(timestamp), "%H:%M:%S", timeinfo);
-    
-    // Print to console
-    printf("[AMSKY01] [%s] DATA: %s\n", timestamp, data.c_str());
-    std::cout.flush();
     
     // Parse weather data
     if (parseHygro(data) || parseLight(data) || parseCloud(data))
@@ -313,7 +300,9 @@ void AMSKY01::processData(const std::string& data)
         }
     }
     
-    LOGF_INFO("Received data: %s", data.c_str());
+    // Log received data only in debug mode
+    if (isDebug())
+        LOGF_DEBUG("Received data: %s", data.c_str());
 }
 
 // Weather-specific functions
@@ -353,10 +342,6 @@ bool AMSKY01::parseHygro(const std::string& data)
                 weatherData.dewPoint = (b * alpha) / (a - alpha);
                 
                 weatherData.hygroValid = true;
-                
-                printf("[AMSKY01]   🌡️  Temperature: %.1f°C, Humidity: %.1f%%, Dew Point: %.1f°C\n", 
-                       weatherData.temperature, weatherData.humidity, weatherData.dewPoint);
-                std::cout.flush();
                 return true;
             }
             catch (const std::exception& e)
@@ -410,11 +395,6 @@ bool AMSKY01::parseLight(const std::string& data)
                 if (weatherData.skyBrightness > 22.5) weatherData.skyBrightness = 22.5;
                 
                 weatherData.lightValid = true;
-                
-                printf("[AMSKY01]   ☀️  Light: %.1f lux (raw1:%d, raw2:%d, gain:%d, int:%dms), Sky: %.1f mag/arcsec²\n", 
-                       weatherData.lux, weatherData.raw1, weatherData.raw2, weatherData.gain, 
-                       weatherData.integrationTime, weatherData.skyBrightness);
-                std::cout.flush();
                 return true;
             }
             catch (const std::exception& e)
@@ -462,11 +442,6 @@ bool AMSKY01::parseCloud(const std::string& data)
                 if (weatherData.cloudCover > 100.0) weatherData.cloudCover = 100.0;
                 
                 weatherData.cloudValid = true;
-                
-                printf("[AMSKY01]   ☁️  Sky Temps: %.1f, %.1f, %.1f, %.1f, %.1f (avg: %.1f), Cloud Cover: %.1f%%\n",
-                       weatherData.cloudTemp[0], weatherData.cloudTemp[1], weatherData.cloudTemp[2], 
-                       weatherData.cloudTemp[3], weatherData.cloudTemp[4], weatherData.avgCloudTemp, weatherData.cloudCover);
-                std::cout.flush();
                 return true;
             }
             catch (const std::exception& e)
