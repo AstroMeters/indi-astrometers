@@ -34,9 +34,8 @@ Our drivers enable seamless integration and full control of your telescope acces
 
 * **indi_amsky01** – Direct serial connection to AMSKY01 hardware
 * **indi_amsky01_api** – HTTP API client that connects to `amsky01_viewer.py` service
-  * No physical connection required
+  * Designed for use with amsky_viewer UI app
   * Fetches data from `http://localhost:8080/data.json` (configurable)
-  * Ideal for remote monitoring or when the device is managed by another process
 
 ### AMTEST01 – Test Driver
 
